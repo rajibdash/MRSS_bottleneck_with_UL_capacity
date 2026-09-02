@@ -1,0 +1,63 @@
+# 6G HARQ Framework: CB-Level Repair & Feedback Reliability
+
+This document summarizes the architectural evolution from traditional 5G Transport Block (TB) retransmission methods to the precise **6G Code Block (CB) level surgical repair** mechanism, detailing the message flows and system configurations required for ultra-low latency.
+
+---
+
+## 1. 6G CB-Level HARQ Message Flow
+
+In the 6G framework, when a data transmission suffers localized corruption, only the specific corrupted Code Blocks (CBs) along with necessary redundancy data are retransmitted. This sequence is performed over a hardened, tightly-synchronized feedback channel.
+
+```text
+  UE (User Equipment)                                     gNodeB (6G Base Station)
+       |                                                             |
+       | <------------------ 1. Initial Transmission --------------- |
+       |                      (Entire Transport Block)               |
+       |                                                             |
+[Decodes TB]                                                         |
+[Identifies 4 failed CBs]                                            |
+[Out of 16 total CBs]                                                |
+       |                                                             |
+       | ------------------ 2. Precise CB-Level NACK --------------> |
+       |                      (Hardened Feedback Channel)            |
+       |                      (Indicates specific failed CBs)        |
+       |                                                             |
+       |                                                       [Processes NACK]
+       |                                                       [Extracts precise CB IDs]
+       |                                                       [Generates Redundancy Data]
+       |                                                             |
+       | <---------------- 3. Surgical Retransmission -------------- |
+       |                      (Only Failed CBs + Redundancy)         |
+       |                                                             |
+[Combines & Repairs]                                                 |
+[Successful Decode]                                                  |
+       |                                                             |
+       | -------------------------- 4. ACK ------------------------> |
+```
+
+---
+
+## 2. Comparative Analysis
+
+The table below contrasts the legacy "Wideband Inefficiency" method with the new "Precise & Surgical" 6G HARQ mechanism:
+
+| Metric / Feature | Old Method (TB Retransmission) | New 6G Method (CB-Level Repair) |
+| :--- | :--- | :--- |
+| **Retransmission Granularity** | Retransmits the **entire Transport Block (TB)** | Retransmits **only failed Code Blocks (CBs)** |
+| **Feedback Mechanism** | Standard wideband NACK | Precise, **CB-level NACK** |
+| **Spectral Efficiency** | **Low** (Wastes spectrum on already successful data) | **High** (Saves spectrum via precise target repair) |
+| **Overhead & Latency** | High overhead / Higher latency | **Lower overhead / Faster recovery** |
+| **Feedback Protection** | Vulnerable to timing & misread errors | **Hardened channels & tighter timing alignment** |
+| **Application Suitability**| Not practical for high-rate systems | **Ideal for tight latency applications** |
+
+---
+
+## 3. Feedback Reliability & Robustness Measures
+
+To avoid structural drops in throughput caused by mismatches (such as NACKs misread as ACKs, timing mismatches, and Bandwidth Part (BWP) desynchronization), the 6G implementation integrates specialized safety layers:
+
+*   **Hardened Feedback Channels:** Robust signal modulation to guarantee zero-loss feedback paths.
+*   **Tighter Timing Alignment:** Sub-microsecond synchronization between the UE and gNodeB to prevent window drift.
+*   **Explicit Fallback Options:** Pre-allocated state-machine rules that kick in instantly if the main feedback channel undergoes sudden degradation.
+
+**Overall Result:** High spectral efficiency, consistent continuity of service, and predictable delivery times across high-rate systems.
