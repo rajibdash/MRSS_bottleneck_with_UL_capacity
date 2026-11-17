@@ -11,7 +11,7 @@ MRSS allows multiple radio access technologies to share a carrier; it improves s
 
 Ericsson does not identify a single fixed MRSS-specific uplink capacity limit. In an operator network, the practical limit depends on the uplink resources available under the scheduler and concurrent load, as well as uplink signal quality and coverage (especially at the cell edge). Assess uplink load/resource use, signal quality, and cell-edge throughput separately from downlink capacity; downlink headroom does not guarantee uplink headroom.
 
-# Link budget calculation ???
+## Link budget calculation ???
 
 When calculating the Maximum Allowed Path Loss (MAPL) and executing link budgets for an MRSS (Multi-RAT Spectrum Sharing) carrier, the traditional 5G NR link budget equations must be modified to account for 5G/6G coexistence. Because MRSS allows 5G and 6G to share the exact same low- or mid-band (FR1) carrier dynamically, the uplink budget is governed heavily by duplexing choice (FDD vs. TDD), control channel architecture overheads, and new 6G receiver baselines.
 
