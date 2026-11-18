@@ -37,3 +37,22 @@ To prevent MRSS from degrading native 6G performance and causing uplink capacity
 | **Invisible 6G Preamble & Access Signaling** | Embed "invisible" 6G synchronization signals (SSB) and prioritize AI/ML-driven beam prediction to shorten initial access loops, bypassing traditional heavy-overhead RACH procedures whenever prior connected-state context is available. |
 | **AI-Native Dynamic Sharing Ratios** | Utilize Network Data Analytics Function (**NWDAF**) and Real-Time Intelligent Controllers (**RIC**) to predict traffic bursts. The scheduler should shift spectrum partitioning adaptively rather than relying on reactive millisecond slot-by-slot arbitration. |
 | **Lightweight Rate-Matching** | Keep the 6G frame clear of hardcoded legacy placeholders by utilizing soft, flexible rate-matching configurations around 5G always-on signals, protecting 6G native standalone performance. |
+
+---
+
+## 4. Ericsson-published MRSS and uplink-scheduling context
+
+**Assessment (public Ericsson material available as of November 18, 2026):** Ericsson has described how it expects 5G–6G MRSS to operate, but the sources below do not declare the specific MRSS uplink bottlenecks listed in Section 2 as established Ericsson findings. They also do not specify a 5G/6G bandwidth-split algorithm driven by the two RATs' channel conditions. The bottlenecks in Sections 2 and the recommendations in Section 3 should therefore be read as this document's analysis, not as Ericsson-attributed conclusions.
+
+Ericsson's MRSS discussion states that:
+
+- 5G and 6G should use the same OFDM waveform and numerology with aligned subcarriers to reduce interference and enable sharing.
+- Since traffic is bursty, spectrum sharing should be dynamic: when one RAT has no traffic, the carrier should be available to the other. Ericsson describes tight, millisecond-timescale scheduling coordination, supplemented by semi-statically reserved resources and resource-block alignment.
+- This is a traffic/resource-availability sharing model in the cited discussion; it does not prescribe bandwidth division based on radio-channel quality or different channel conditions between 5G and 6G.
+
+Ericsson separately discusses uplink scheduling latency in 5G: a UE's scheduling request (SR) is followed by a small grant carrying a buffer status report (BSR), after which the base station can schedule the remaining buffered data. Ericsson proposes a 6G contention-based BSR mechanism and reports a 51% tail-latency reduction versus the 5G SR baseline in its evaluation. This is a general uplink-scheduling discussion, not a declaration that MRSS creates UCI aggregation, PRACH collision, scheduler-split, or power-headroom bottlenecks.
+
+**Sources**
+
+- Ericsson, [Multi-RAT spectrum sharing and 5G–6G migration](https://www.ericsson.com/en/blog/2026/4/5g-6g-spectrum-sharing-mrss), April 2026.
+- Ericsson, [Faster 6G applications with better UL scheduling](https://www.ericsson.com/en/reports-and-papers/ericsson-technology-review/articles/faster-6g-applications-with-better-ul-scheduling), October 2026.
