@@ -7,6 +7,72 @@ This document evaluates these scheduler bottlenecks and presents architectural d
 
 ---
 
+Typical Mid-Band 10 ms MRSS Frame Diagram (100 MHz TDD @ 30 kHz SCS)
+
+```text
+
+10 ms Radio Frame = 10 Subframes (SF 0–9) = 20 Slots (Slot 0–19 @ 0.5 ms/slot, 30 kHz SCS)
+◄────────────── 2.5 ms Cycle 0 ──────────────►◄─ 2.5 ms Cycle 1 ─►◄─ 2.5 ms Cycle 2 ─►◄─ 2.5 ms Cycle 3 ─►
+ SF 0 (S0–S1)  │ SF 1 (S2–S3)  │ SF 2 (S4)    │ SF 2–4 (S5–S9)   │ SF 5–7 (S10–S14) │ SF 7–9 (S15–S19)
+  D      D     │  D      S     │  U           │  D  D  D  S  U   │  D  D  D  S  U   │  D  D  D  S  U
+▲
+│ ┌────────────┬───────────────┬──────────────┬──────────────────┬──────────────────┬──────────────────┐
+│ │ Upper Guard (~0.86 MHz)    │              │                  │                  │                  │
+│ ├────────────┼───────────────┼──────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ │            │ [S3] DL: 6G   │ [S4] 5G/6G   │                  │                  │                  │ PRB 265–272
+│ │            │  PDSCH (0-9)  │ PUCCH (Edge) │                  │                  │                  │ (Band Edge)
+│ │ 6G PDSCH   ├───────────────┤ 6G PUSCH     │  Dynamic 5G + 6G │  Dynamic 5G + 6G │  Dynamic 5G + 6G │
+│ │(PRB 147–272│ [S3] Guard    │ (PRB 147-264)│  DL/UL Sharing   │  DL/UL Sharing   │  DL/UL Sharing   │
+│ ├────────────┤ Period (GP)   ├──────────────┤  (Slots 5–9)     │  (Slots 10–14)   │  (Slots 15–19)   │
+│ │ 5G SSB     │ (Sym 10–11)   │ 5G PUSCH     │                  │                  │                  │ PRB 127–146
+│ │ (20 PRBs,  ├───────────────┤ (PRB 20-146) │                  │                  │                  │ (Rate-Matched
+│ │  6G Rate-  │ [S3] UL: SRS  ├──────────────┤                  │                  │                  │  by 6G)
+│ │  Matched)  │ / Short PUCCH │ 5G/6G PRACH  │                  │                  │                  │ PRB 8–19
+│ ├────────────┤ (Sym 12–13)   │ (PRB 8-19)   │                  │                  │                  │ (RACH Occasion)
+│ │ 5G PDSCH   │               │ 5G/6G PUCCH  │                  │                  │                  │ PRB 0–7
+│ │ (PRB 0-126)│               │ (PRB 0-7)    │                  │                  │                  │ (Band Edge)
+│ ├────────────┴───────────────┴──────────────┼──────────────────┼──────────────────┼──────────────────┤
+│ │ Lower Guard (~0.86 MHz)                   │                  │                  │                  │
+│ └───────────────────────────────────────────┴──────────────────┴──────────────────┴──────────────────┘
+│  Slot 0–2: DL Slots (PDCCH in Sym 0–1)        Slot 4: UL Slot     Slots 5–9          Slots 10–14        Slots 15–19
+│  (SSB Burst in Half-Frame 0: Slots 0–1)      (PRACH every 5ms)   (No SSB; full      (Repeat cycle;     (Repeat cycle;
+│                                                                   273 PRBs data)     PRACH in Slot 14)  full 273 PRBs)
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────► Time
+
+```
+
+Full 10 ms Frame Time–Frequency Arrangement (400 MHz / 264 PRBs)
+
+```text
+
+10 ms Radio Frame = 10 Subframes (SF 0–9) = 80 Slots (Slot 0–79 @ 0.125 ms/slot)
+◄──────────────────── HALF-FRAME 0 (0–5 ms: Slots 0–39) ────────────────────►◄─── HALF-FRAME 1 (5–10 ms: Slots 40–79) ───►
+ SF 0 (Slots 0–7) │ SF 1 (8–15) │ SF 2 (16–23) │ SF 3 (24–31) │ SF 4 (32–39) │ SF 5 (40–47) │ ... │ SF 9 (72–79)
+ D D D S U │ D D D S U │ D D D S U │ D D D S U │ D D D S U │ D D D S U │ D D D S U │ D D D S U │ ... │ D D D S U  (16 Cycles)
+▲
+│ ┌──────────────────────┬──────────────────────────┬──────────────────────┬──────────────────────────┐
+│ │ Upper Guard (~9.9MHz)│                          │                      │                          │
+│ ├──────────────────────┼──────────────────────────┼──────────────────────┼──────────────────────────┤
+│ │  6G PDSCH (PRB 140–  │ 6G PDSCH                 │ [S] DL: 6G PDSCH     │ [U] 5G/6G PUCCH (256-263)│ PRB 256–263
+│ │  263) + Shared PDCCH │ (PRB 140–263)            │     (Sym 0–9)        │     6G PUSCH (140–255)   │
+│ ├──────────────────────┤                          ├──────────────────────┼──────────────────────────┤
+│ │  SSB Burst Window    │ 5G PDSCH                 │ [S] Guard Period (GP)│ [U] 5G PUSCH             │ PRB 120–139
+│ │  (PRB 120–139, 6G    │ (PRB 0–139)              │     (Sym 10–11: RF   │     (PRB 20–139)         │ (SSB in SF0)
+│ │   Rate-Matched)      │                          │      Switch / TA)    │                          │
+│ ├──────────────────────┤                          ├──────────────────────┼──────────────────────────┤
+│ │  5G PDSCH (PRB 0–119)│                          │ [S] UL: SRS / Short  │ [U] 5G/6G PRACH (8–19)   │ PRB 8–19
+│ │  + Shared PDCCH      │                          │     PUCCH (Sym 12–13)│     5G/6G PUCCH (0–7)    │ PRB 0–7
+│ ├──────────────────────┼──────────────────────────┼──────────────────────┼──────────────────────────┤
+│ │ Lower Guard (~9.9MHz)│                          │                      │                          │
+│ └──────────────────────┴──────────────────────────┴──────────────────────┴──────────────────────────┘
+│   Cycle 1: Slots 0–2     Cycle 2–16: Standard       Special Slot (`S`)     Uplink Slot (`U`)
+│   (DL + SSB + PDCCH)     DL Slots (PDCCH+PDSCH)     (Every 5th Slot:       (Every 5th Slot:
+│                                                      Slots 3, 8, 13...)     Slots 4, 9, 14...; PRACH
+│                                                                             in Slots 4 & 44)
+└───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────► Time
+
+```
+
 ## 2. Identified Uplink & Scheduler Bottlenecks
 
 ### A. Uplink Control Information (UCI) Aggregation Pressures
