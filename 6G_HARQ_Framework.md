@@ -70,7 +70,7 @@ and Bandwidth Part (BWP) desynchronization), the 6G implementation integrates sp
 *   **Strict Timing Alignment:** Sub-microsecond synchronization between the UE and gNodeB to prevent transmission window drift.
 *   **Explicit Fallback Options:** Pre-allocated state-machine rules that kick in instantly if the main feedback channel undergoes sudden degradation.
 
-**Overall Result:** High spectral efficiency, consistent continuity of service, and predictable delivery times across high-rate systems.
+> **Overall Result:** High spectral efficiency, consistent continuity of service, and predictable delivery times across high-rate systems.
 
 ---
 
