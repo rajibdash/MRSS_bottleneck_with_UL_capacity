@@ -10,6 +10,7 @@ This document evaluates these scheduler bottlenecks and presents architectural d
 Typical Mid-Band 10 ms MRSS Frame Diagram (100 MHz TDD @ 30 kHz SCS)
 
 ```text
+?
 
 10 ms Radio Frame = 10 Subframes (SF 0–9) = 20 Slots (Slot 0–19 @ 0.5 ms/slot, 30 kHz SCS)
 ◄────────────── 2.5 ms Cycle 0 ──────────────►◄─ 2.5 ms Cycle 1 ─►◄─ 2.5 ms Cycle 2 ─►◄─ 2.5 ms Cycle 3 ─►
@@ -44,6 +45,7 @@ Typical Mid-Band 10 ms MRSS Frame Diagram (100 MHz TDD @ 30 kHz SCS)
 Full 10 ms Frame Time–Frequency Arrangement (400 MHz / 264 PRBs)
 
 ```text
+?
 
 10 ms Radio Frame = 10 Subframes (SF 0–9) = 80 Slots (Slot 0–79 @ 0.125 ms/slot)
 ◄──────────────────── HALF-FRAME 0 (0–5 ms: Slots 0–39) ────────────────────►◄─── HALF-FRAME 1 (5–10 ms: Slots 40–79) ───►
@@ -72,6 +74,54 @@ Full 10 ms Frame Time–Frequency Arrangement (400 MHz / 264 PRBs)
 └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────► Time
 
 ```
+
+To Understand...(NOT verified)
+
+```text
+?
+
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                    ERICSSON RAN COMPUTE HW (e.g., RAN Processor 6672 / Ericsson Silicon)        │
+│                                                                                                 │
+│  ┌───────────────────────────────────────────────────────────────────────────────────────────┐  │
+│  │  UNIFIED L2 JOINT SCHEDULER & AI-NATIVE RRM (Tensor Cores + Many-Core Compute)            │  │
+│  │  • Maintains real-time PRB occupancy bitmaps across both carriers every slot (0.125/0.5ms)│  │
+│  │  • Performs 6G Carrier Aggregation (CA) & Dynamic UL/DL Carrier Decoupling                │  │
+│  └─────────────────────────┬───────────────────────────────────────────┬─────────────────────┘  │
+│                            │                                           │                        │
+│                            ▼                                           ▼                        │
+│  ┌───────────────────────────────────────────────┐   ┌───────────────────────────────────────┐  │
+│  │ CARRIER 1: 400 MHz MRSS L1/L2 ENGINE          │   │ CARRIER 2: 100 MHz 6G SA L1/L2 ENGINE │  │
+│  │ (264 PRBs @ 120 kHz SCS — 5G SA + 6G SA)      │   │ (273 PRBs @ 30 kHz SCS* — Pure 6G)    │  │
+│  │ • Semi-Static Mask: Reserves 5G SSB (20 PRBs),│   │ • Zero 5G Legacy Overhead: 100% of    │  │
+│  │   orthogonal 5G/6G PRACH & edge PUCCH         │   │   273 PRBs available for 6G SA        │  │
+│  │ • Dynamic PDCCH: Shared 5G/6G CORESETs        │   │ • Lean 6G Signaling: On-demand SIBs,  │  │
+│  │ • L1 Rate-Matching: Hardware wraps 6G PDSCH   │   │   sparse DMRS/CSI-RS                  │  │
+│  │   around 5G SSB & schedules remaining PRBs    │   │ • AI Beamforming: Tensor Core MU-MIMO │  │
+│  └─────────────────────────┬─────────────────────┘   └─────────────────┬─────────────────────┘  │
+└────────────────────────────┼───────────────────────────────────────────┼────────────────────────┘
+                             │ eCPRI Fronthaul                           │ eCPRI Fronthaul
+                             ▼ (Frequency-Domain PRB IQ Grids)           ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│             ERICSSON ANTENNA-INTEGRATED RADIOS (AIR) + MULTI-BAND POWER POOLING                 │
+│  • Maps 264-PRB (400 MHz) & 273-PRB (100 MHz) FFT grids to RF chains                            │
+│  • Dynamically shifts Power Amplifier (PA) energy across PRBs based on active 5G/6G traffic     │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+Note: 100 MHz uses 273 PRBs at 30 kHz SCS (FR1/FR3 cmWave) or 66 PRBs at 120 kHz SCS (FR2 mmWave).
+
+```
+
+**How E/// Hardware will execute both workloads Per Slot (Thoughts)**
+
+* **1. Semi-Static PRB Masking (L1 Hardware Registers)**: At frame initialization, Ericsson Silicon writes a hardware PRB mask for the 400 MHz MRSS carrier flagging which PRBs/symbols carry always-on 5G SSBs, 6G discovery signals, and orthogonal 5G/6G PRACH/PUCCH occasions. The 100 MHz 6G SA carrier receives a clean mask with only lean 6G control/sync resources.(A PRB Bitmap needed for allocated/unallocated PRBs between both carriers)
+  
+* **2. Joint Slot-by-Slot PRB Allocation (L2 Many-Core Scheduler)**: Every slot, the unified MAC scheduler evaluates 5G SA and 6G SA QoS flows together. On the 400 MHz carrier, it assigns contiguous PRB bundles to 5G UEs and 6G UEs without guard bands between them.
+  
+* **3. Cross-Carrier Aggregation & UL/DL Decoupling**: For a 6G SA device aggregated across both carriers (up to 537 total PRBs), Ericsson's scheduler applies 6G UL/DL carrier decoupling:</br>
+	• Downlink: Steers bursty, high-throughput 6G traffic onto the 400 MHz MRSS carrier whenever 5G traffic dips, achieving sub-3% coexistence overhead.</br>
+	• Uplink: Anchors power-limited or latency-sensitive 6G uplink onto the 100 MHz dedicated 6G SA carrier (especially if deployed in mid-band FR1/FR3), avoiding 5G uplink contention and extending cell-edge range.
+
+* **4. Hardware Rate-Matching & Multi-Band Power Pooling**: Dedicated L1 baseband accelerators execute bit-level rate-matching around masked 5G PRBs in real time, while Ericsson’s radio units dynamically pool transmit power across active PRBs on both carriers rather than backing off power statically
 
 ## 2. Identified Uplink & Scheduler Bottlenecks
 
