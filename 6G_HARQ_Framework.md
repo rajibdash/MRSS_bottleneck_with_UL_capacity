@@ -89,3 +89,7 @@ layers to break the latency bottleneck of conventional Stop-and-Wait (SAW) HARQ 
   with probabilistic constellation shaping) accelerate convergence to target Block Error Rates (BLER) and
   reduce the total number of retransmissions required at the cell edge.
 
+> Under study for 6G L2 streamlining, the physical/MAC layer directly exposes local HARQ failure events to
+> the RLC layer. Upon detecting a final HARQ failure, the scheduler autonomously triggers an immediate RLC
+> ARQ retransmission without waiting for upper-layer signaling.
+
