@@ -144,7 +144,8 @@ Unlike standalone scheduling, an MRSS scheduler must arbitrate resources between
 
 ## 3. Recommended 6G Architectural Design Framework
 
-To prevent MRSS from degrading native 6G performance and causing uplink capacity exhaustion, the 6G radio access network (RAN) and scheduler architectures should implement the following guidelines:
+To prevent MRSS from degrading native 6G performance and causing uplink capacity exhaustion, 
+the 6G radio access network (RAN) and scheduler architectures should implement the following guidelines:
 
 | Design Dimension | Recommended 6G Implementation Strategy |
 | :--- | :--- |
