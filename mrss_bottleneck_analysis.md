@@ -252,6 +252,9 @@ Ericsson's MRSS discussion states that:
 
 Ericsson separately discusses uplink scheduling latency in 5G: a UE's scheduling request (SR) is followed by a small grant carrying a buffer status report (BSR), after which the base station can schedule the remaining buffered data. Ericsson proposes a 6G contention-based BSR mechanism and reports a 51% tail-latency reduction versus the 5G SR baseline in its evaluation. This is a general uplink-scheduling discussion, not a declaration that MRSS creates UCI aggregation, PRACH collision, scheduler-split, or power-headroom bottlenecks.
 
+UL-only MRSS:  It is a 3GPP 6G study concept where a 5G/6G shared low- or mid-band carrier (typically FR1) is used exclusively for 6G uplink (UL) transmissions while the 6G downlink (DL) operates on a higher-frequency carrier (such as FR3 or upper 6 GHz / FR1-U6). So, no Dedicated 6G DL Control/Data in MRSS. Because the UE does not receive 6G data on the FR1 MRSS downlink, the network avoids allocating 6G PDCCH/PDSCH overhead on the shared FR1 carrier.
+
+
 **Sources**
 
 - Ericsson, [Multi-RAT spectrum sharing and 5G–6G migration](https://www.ericsson.com/en/blog/2026/4/5g-6g-spectrum-sharing-mrss), April 2026.
