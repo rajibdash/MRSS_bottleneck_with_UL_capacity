@@ -111,6 +111,89 @@ Note: 100 MHz uses 273 PRBs at 30 kHz SCS (FR1/FR3 cmWave) or 66 PRBs at 120 kHz
 
 ```
 
+5G Radio Unit (RU) and a 6G Radio Unit (RU) connect in a cascaded chain to a common C-RAN Baseband (DU/CU).
+
+```
++---------------------------------------------------------------------------------------------------+
+|																									|
+|                                        CORE NETWORK (BACKHAUL)                                    |
+|                                                                                                   |
+|       +-----------------------------------+                   +-------------------------------+   |
+|       |          5G Core (5GC)            |                   |         6G Core (6GC)         |   |
+|       |   (AMF / SMF / UPF - 5G Slice)    |                   |   (6G Control & User Plane)   |   |
+|       +-----------------+-----------------+                   +---------------+---------------+   |
++-------------------------|-----------------------------------------------------|-------------------+
+
+                          | NG-C / NG-U                                         | 6G-NG (SA Backhaul)
+                          | (F1/E1 Split)                                       |
++-------------------------v-----------------------------------------------------v-------------------+
+|																									|
+|                                   C-RAN BASEBAND POOL (COMMON gNB)                                |
+|                                                                                                   |
+|   +-------------------------------------------------------------------------------------------+   |
+|   |                       Multi-RAT Central Unit (CU-CP & CU-UP)                              |   |
+|   |             [Separates 5G PDCP/RRC & 6G PDCP/RRC • Routes to 5GC vs. 6GC]                 |   |
+|   +---------------------------------------------+---------------------------------------------+   |
+|                                                 | F1 Interface (Internal / Midhaul)               |
+|   +---------------------------------------------v---------------------------------------------+   |
+|   |                       Multi-RAT Distributed Unit (DU)                                     |   |
+|   |                                                                                           |   |
+|   |   +---------------------------------------+       +-----------------------------------+   |   |
+|   |   |         5G NR Stack (RLC/MAC)         |       |       6G Stack (RLC/MAC)          |   |   |
+|   |   +-------------------+-------------------+       +-----------------+-----------------+   |   |
+|   |                       |                                             |                     |   |
+|   |   +-------------------v---------------------------------------------v-----------------+   |   |
+|   |   |                 Shared Multi-RAT Spectrum Sharing (MRSS) Scheduler                |   |   |
+|   |   +-----------------------------------------+-----------------------------------------+   |   |
+|   |                                             |                                             |   |
+|   |   +-----------------------------------------v-----------------------------------------+   |   |
+|   |   |            Common Low-PHY / eCPRI Multiplexer & PTP Grandmaster Clock             |   |   |
+|   |   +-----------------------------------------+-----------------------------------------+   |   |
+|   +---------------------------------------------|---------------------------------------------+   |
++---------------------------------------------------|-----------------------------------------------+
+                                                    |
+                                                    | Single Trunk Fiber (Fronthaul)
+                                                    | [25G / 50G / 100G eCPRI + IEEE 1588v2 PTP]
+                                                    | (Carries tagged 5G IQ + 6G IQ + Sync)
+                                                    |
++---------------------------------------------------v-----------------------------------------------+
+|																									|
+|                                        TOWER / CELL SITE                                          |
+|                                                                                                   |
+|   +-------------------------------------------------------------------------------------------+   |
+|   |                                5G Radio Unit (5G RU) — [HOP 1]                            |   |
+|   |                                                                                           |   |
+|   |   [Optical Port 1: IN]  <--- Receives combined 5G + 6G eCPRI & PTP Clock                  |   |
+|   |          |                                                                                |   |
+|   |          +---> Extracts 5G IQ Data  ---> [5G High-PHY / Beamforming] ---> (( 5G RF ))     |   |
+|   |          |                                                                                |   |
+|   |          +---> Internal L2 Switch / Pass-Through + PTP Boundary Clock                     |   |
+|   |          |                                                                                |   |
+|   |   [Optical Port 2: OUT] ---> Forwards 6G IQ Data & Regenerated PTP Sync                   |   |
+|   +---------------------------------------------|---------------------------------------------+   |
+|                                                 |                                                 |
+|                                                 | Short Jumper Fiber (Cascaded Link)              |
+|                                                 | [eCPRI Pass-Through + PTP Sync]                 |
+|                                                 |                                                 |
+|   +---------------------------------------------v---------------------------------------------+   |
+|   |                                6G Radio Unit (6G RU) — [HOP 2]                            |   |
+|   |                                                                                           |   |
+|   |   [Optical Port 1: IN]  <--- Receives 6G eCPRI Data & PTP Clock from 5G RU                |   |
+|   |          |                                                                                |   |
+|   |          +---> Extracts 6G IQ Data  ---> [6G High-PHY / Sub-THz or FR3] ---> (( 6G RF ))  |   |
+|   |          |                                                                                |   |
+|   |   [Optical Port 2: OUT] (Terminated or available for Hop 3)                               |   |
+|   +-------------------------------------------------------------------------------------------+   |
++---------------------------------------------------------------------------------------------------+
+
+```
+I guess in real world deployments, RF engineers typically place the 6G RU at Hop 1 (closest to the baseband) and 
+the 5G RU at Hop 2. Because 6G requires tighter latency budgets and stricter phase synchronization than 5G, 
+putting the 6G radio first avoids the switching delay and clock jitter (jitter accumulation avoidance) added by passing 
+through the 5G radio's internal switch.
+
+---
+
 **How E/// Hardware will execute both workloads Per Slot (Thoughts)**
 
 * **1. Semi-Static PRB Masking (L1 Hardware Registers)**: At frame initialization, Ericsson Silicon writes a hardware PRB mask for the 400 MHz MRSS carrier flagging which PRBs/symbols carry always-on 5G SSBs, 6G discovery signals, and orthogonal 5G/6G PRACH/PUCCH occasions. The 100 MHz 6G SA carrier receives a clean mask with only lean 6G control/sync resources.(A PRB Bitmap needed for allocated/unallocated PRBs between both carriers)
